@@ -149,15 +149,20 @@ h1, h2, h3 { color: #a8b8e8 !important; }
 CSV_PATH = "seoul_temperature.csv"
 
 # ========== 공통 Plotly 테마 ==========
+_GRID = "rgba(80,100,160,0.15)"
 PLOTLY_LAYOUT = dict(
     paper_bgcolor="rgba(0,0,0,0)",
     plot_bgcolor="rgba(10,12,30,0.6)",
     font=dict(family="Noto Sans KR", color="#a0b0d0"),
-    xaxis=dict(gridcolor="rgba(80,100,160,0.15)", zerolinecolor="rgba(80,100,160,0.15)"),
-    yaxis=dict(gridcolor="rgba(80,100,160,0.15)", zerolinecolor="rgba(80,100,160,0.15)"),
     hoverlabel=dict(bgcolor="#1a1a4e", font_color="#e0e8ff", bordercolor="#4a5aaa"),
     margin=dict(l=40, r=40, t=40, b=40),
 )
+
+def apply_layout(fig, **extra):
+    """PLOTLY_LAYOUT + 축 그리드 + 추가 옵션을 안전하게 적용"""
+    fig.update_layout(**PLOTLY_LAYOUT, **extra)
+    fig.update_xaxes(gridcolor=_GRID, zerolinecolor=_GRID)
+    fig.update_yaxes(gridcolor=_GRID, zerolinecolor=_GRID)
 
 
 @st.cache_data
@@ -269,13 +274,15 @@ st.markdown("")
 st.markdown('<div class="section-title">📈 연평균기온 추이</div>', unsafe_allow_html=True)
 
 fig1 = go.Figure()
-# 범위 채우기 (연평균 ↔ 이동평균 사이)
-fig1.add_trace(go.Scatter(
-    x=pd.concat([y_sel["연도"], y_sel["연도"][::-1]]),
-    y=pd.concat([y_sel["연평균기온"], y_sel["5년 이동평균"][::-1]]),
-    fill="toself", fillcolor="rgba(99,130,255,0.06)",
-    line=dict(width=0), showlegend=False, hoverinfo="skip",
-))
+# 범위 채우기 (연평균 ↔ 이동평균 사이, NaN 제거)
+_fill = y_sel.dropna(subset=["연평균기온", "5년 이동평균"])
+if not _fill.empty:
+    fig1.add_trace(go.Scatter(
+        x=pd.concat([_fill["연도"], _fill["연도"][::-1]]),
+        y=pd.concat([_fill["연평균기온"], _fill["5년 이동평균"][::-1]]),
+        fill="toself", fillcolor="rgba(99,130,255,0.06)",
+        line=dict(width=0), showlegend=False, hoverinfo="skip",
+    ))
 fig1.add_trace(go.Scatter(
     x=y_sel["연도"], y=y_sel["연평균기온"],
     mode="lines+markers", name="연평균기온",
